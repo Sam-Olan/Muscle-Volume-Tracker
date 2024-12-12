@@ -30,11 +30,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		D6F76A152D08A72D0089425E /* Muscle Volume Tracker */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Muscle Volume Tracker";
-			sourceTree = "<group>";
-		};
 		D6F76A262D08A72E0089425E /* Muscle Volume TrackerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Muscle Volume TrackerTests";
@@ -43,6 +38,11 @@
 		D6F76A302D08A72E0089425E /* Muscle Volume TrackerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Muscle Volume TrackerUITests";
+			sourceTree = "<group>";
+		};
+		D6F76A572D08C29E0089425E /* Muscle Volume Tracker */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Muscle Volume Tracker";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,7 +75,7 @@
 		D6F76A0A2D08A72D0089425E = {
 			isa = PBXGroup;
 			children = (
-				D6F76A152D08A72D0089425E /* Muscle Volume Tracker */,
+				D6F76A572D08C29E0089425E /* Muscle Volume Tracker */,
 				D6F76A262D08A72E0089425E /* Muscle Volume TrackerTests */,
 				D6F76A302D08A72E0089425E /* Muscle Volume TrackerUITests */,
 				D6F76A142D08A72D0089425E /* Products */,
@@ -108,7 +108,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				D6F76A152D08A72D0089425E /* Muscle Volume Tracker */,
+				D6F76A572D08C29E0089425E /* Muscle Volume Tracker */,
 			);
 			name = "Muscle Volume Tracker";
 			packageProductDependencies = (
@@ -396,6 +396,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Muscle Volume Tracker/Preview Content\"";
+				DEVELOPMENT_TEAM = AH4X9C5429;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -424,6 +425,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Muscle Volume Tracker/Preview Content\"";
+				DEVELOPMENT_TEAM = AH4X9C5429;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -11,7 +11,7 @@ import SwiftUI
 struct Muscle_Volume_TrackerApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
         }
     }
 }

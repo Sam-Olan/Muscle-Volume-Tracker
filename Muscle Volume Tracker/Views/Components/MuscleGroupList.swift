@@ -3,75 +3,58 @@ import SwiftUI
 struct MuscleGroupList: View {
     let muscleValues: [String: Int]
     @Binding var expandedSections: Set<String>
+    var onMuscleSelected: ((String) -> Void)?
     
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(showsIndicators: true) {
-                VStack(spacing: 8) {
-                    ForEach(MuscleCategories.order, id: \.self) { category in
-                        if let muscles = MuscleCategories.categories[category] {
-                            DisclosureGroup(
-                                isExpanded: Binding(
-                                    get: { expandedSections.contains(category) },
-                                    set: { isExpanded in
-                                        if isExpanded {
-                                            expandedSections.insert(category)
-                                            if category == "Misc" {
-                                                withAnimation {
-                                                    proxy.scrollTo("bottom", anchor: .bottom)
-                                                }
-                                            }
-                                        } else {
-                                            expandedSections.remove(category)
-                                        }
-                                    }
-                                )
-                            ) {
-                                ForEach(muscles, id: \.self) { muscle in
-                                    HStack {
-                                        Text(muscle)
-                                        Spacer()
-                                        Text("Sets: \(muscleValues[muscle, default: 0])")
-                                    }
-                                    .foregroundColor(.secondary)
-                                    .padding(.vertical, 2)
+        VStack(spacing: 16) {
+            ForEach(MuscleCategories.order, id: \.self) { category in
+                if let muscles = MuscleCategories.categories[category] {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if category != "Cardio" {
+                            Button {
+                                if expandedSections.contains(category) {
+                                    expandedSections.remove(category)
+                                } else {
+                                    expandedSections.insert(category)
                                 }
                             } label: {
-                                CategoryHeader(category: category, isExpanded: expandedSections.contains(category))
+                                HStack(spacing: 4) {
+                                    Text(category)
+                                        .font(.headline)
+                                    Image(systemName: expandedSections.contains(category) ? "chevron.down" : "chevron.right")
+                                        .foregroundColor(.blue)
+                                        .font(.caption)
+                                    Spacer()
+                                }
+                                .foregroundColor(.primary)
                             }
-                            .buttonStyle(PlainButtonStyle())
+                        } else {
+                            Text(category)
+                                .font(.headline)
+                        }
+                        
+                        if category == "Cardio" || expandedSections.contains(category) {
+                            ForEach(muscles, id: \.self) { muscle in
+                                HStack {
+                                    Text(muscle)
+                                    Spacer()
+                                    Text("\(category == "Cardio" ? "Sessions" : "Sets"): \(muscleValues[muscle, default: 0])")
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .padding(.leading, 2)
+                                }
+                                .padding(8)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(8)
+                                .onTapGesture {
+                                    onMuscleSelected?(muscle)
+                                }
+                            }
                         }
                     }
-                    
-                    Color.clear
-                        .frame(height: 1)
-                        .id("bottom")
-                }
-            }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + ViewConstants.scrollIndicatorDelay) {
-                    withAnimation(.easeInOut(duration: ViewConstants.scrollIndicatorDuration)) {}
                 }
             }
         }
-    }
-}
-
-private struct CategoryHeader: View {
-    let category: String
-    let isExpanded: Bool
-    
-    var body: some View {
-        HStack {
-            Text(category)
-                .font(.headline)
-                .foregroundColor(.primary)
-            Spacer()
-            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                .foregroundColor(.blue)
-                .font(.caption)
-                .frame(width: 20)
-        }
-        .padding(.vertical, 4)
     }
 } 

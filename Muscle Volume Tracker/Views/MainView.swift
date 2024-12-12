@@ -42,11 +42,20 @@ struct MainView: View {
                 .environmentObject(workoutHistory)
                 .tabItem {
                     VStack {
-                        Image(systemName: "person")
+                        Image(systemName: "clock")
                         Text("History")
                     }
                 }
                 .tag(1)
+            
+            PersonalView()
+                .tabItem {
+                    VStack {
+                        Image(systemName: "person")
+                        Text("Personal")
+                    }
+                }
+                .tag(2)
         }
         .accentColor(.white)
         .onChange(of: selectedTab) { _, newValue in

@@ -6,10 +6,13 @@ enum MuscleCategories {
         "Push": ["Chest", "Triceps", "Front Delts", "Side Delts"],
         "Pull": ["Lats", "Biceps", "Mid Back", "Rear Delts"],
         "Legs": ["Quads", "Hamstrings", "Glutes", "Calves"],
-        "Misc": ["Core", "Forearms", "Lower Back"]
+        "Misc": ["Core", "Forearms", "Lower Back"],
+        "Cardio": ["Cardio"]
     ]
     
-    static let order = ["Push", "Pull", "Legs", "Misc"]
+    static let order = ["Push", "Pull", "Legs", "Misc", "Cardio"]
+    
+    static let muscleViewCategories = ["Push", "Pull", "Legs", "Misc"]
 }
 
 enum CalendarConstants {

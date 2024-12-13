@@ -8,13 +8,9 @@
 import SwiftUI
 
 struct MainView: View {
-    @StateObject private var workoutHistory: WorkoutHistory = {
-        let history = WorkoutHistory()
-        // Any additional setup if needed
-        return history
-    }()
-    @State var selectedTab = 0
-    @State private var shouldCloseTiles = false
+    @EnvironmentObject private var workoutHistory: WorkoutHistory
+    @EnvironmentObject private var volumeGoals: VolumeGoals
+    @State var selectedTab = 1
     
     init() {
         let appearance = UITabBarAppearance()
@@ -28,22 +24,20 @@ struct MainView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            MuscleView()
-                .environmentObject(workoutHistory)
-                .tabItem {
-                    VStack {
-                        Image(systemName: "figure.arms.open")
-                        Text("Volumes")
-                    }
-                }
-                .tag(0)
-
-            HistoryView(closeModalsOnTabChange: shouldCloseTiles)
-                .environmentObject(workoutHistory)
+            HistoryView()
                 .tabItem {
                     VStack {
                         Image(systemName: "clock")
                         Text("History")
+                    }
+                }
+                .tag(0)
+
+            MuscleView()
+                .tabItem {
+                    VStack {
+                        Image(systemName: "figure.arms.open")
+                        Text("Volumes")
                     }
                 }
                 .tag(1)
@@ -58,17 +52,11 @@ struct MainView: View {
                 .tag(2)
         }
         .accentColor(.white)
-        .onChange(of: selectedTab) { _, newValue in
-            if newValue == 0 {
-                // Immediately close tiles when switching to Volumes tab
-                shouldCloseTiles = true
-            } else {
-                shouldCloseTiles = false
-            }
-        }
     }
 }
 
 #Preview {
     MainView()
+        .environmentObject(WorkoutHistory())
+        .environmentObject(VolumeGoals())
 }

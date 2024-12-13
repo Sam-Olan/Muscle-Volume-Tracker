@@ -78,14 +78,9 @@ struct ModalView<Content: View>: View {
 
 struct HistoryView: View {
     @EnvironmentObject private var workoutHistory: WorkoutHistory
-    @State private var expandedSections: [UUID: Set<String>] = [:]
     @State private var selectedWeek: WorkoutWeek?
     @State private var showingAllTimeStats = false
     @State private var showingResetConfirmation = false
-    let closeModalsOnTabChange: Bool
-    
-    private let categoryOrder = MuscleCategories.order
-    private let muscleCategories = MuscleCategories.categories
     
     var body: some View {
         ZStack {
@@ -175,7 +170,7 @@ struct HistoryView: View {
                 }
             }
             
-            if let week = selectedWeek, !closeModalsOnTabChange {
+            if let week = selectedWeek {
                 ModalView(title: getDateRange(for: week.startDate), isPresented: Binding(
                     get: { selectedWeek != nil },
                     set: { if !$0 { selectedWeek = nil } }
@@ -184,7 +179,7 @@ struct HistoryView: View {
                 }
             }
             
-            if showingAllTimeStats && !closeModalsOnTabChange {
+            if showingAllTimeStats {
                 ModalView(title: "All Time Stats", isPresented: Binding(
                     get: { showingAllTimeStats },
                     set: { if !$0 { showingAllTimeStats = false } }
@@ -193,13 +188,9 @@ struct HistoryView: View {
                 }
             }
         }
-        .onChange(of: closeModalsOnTabChange) { _, shouldClose in
-            if shouldClose {
-                withAnimation(nil) {
-                    selectedWeek = nil
-                    showingAllTimeStats = false
-                }
-            }
+        .onDisappear {
+            selectedWeek = nil
+            showingAllTimeStats = false
         }
         .confirmationDialog(
             "Reset All Data",

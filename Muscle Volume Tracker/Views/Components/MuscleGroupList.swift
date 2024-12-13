@@ -4,6 +4,7 @@ struct MuscleGroupList: View {
     let muscleValues: [String: Int]
     @Binding var expandedSections: Set<String>
     var onMuscleSelected: ((String) -> Void)?
+    var showEditArrows: Bool = false
     
     var body: some View {
         VStack(spacing: 16) {
@@ -35,20 +36,24 @@ struct MuscleGroupList: View {
                         
                         if category == "Cardio" || expandedSections.contains(category) {
                             ForEach(muscles, id: \.self) { muscle in
-                                HStack {
-                                    Text(muscle)
-                                    Spacer()
-                                    Text("\(category == "Cardio" ? "Sessions" : "Sets"): \(muscleValues[muscle, default: 0])")
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                        .padding(.leading, 2)
-                                }
-                                .padding(8)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(8)
-                                .onTapGesture {
-                                    onMuscleSelected?(muscle)
+                                HStack(spacing: 10) {
+                                    HStack {
+                                        Text(muscle)
+                                        Spacer()
+                                        Text("\(category == "Cardio" ? "Sessions" : "Sets"): \(muscleValues[muscle, default: 0])")
+                                        if showEditArrows {
+                                            Image(systemName: "chevron.right")
+                                                .foregroundColor(.gray)
+                                                .font(.caption)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(8)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(8)
+                                    .onTapGesture {
+                                        onMuscleSelected?(muscle)
+                                    }
                                 }
                             }
                         }

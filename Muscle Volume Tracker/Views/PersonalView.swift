@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PersonalView: View {
-    @StateObject private var volumeGoals = VolumeGoals()
+    @EnvironmentObject private var volumeGoals: VolumeGoals
     @State private var showingGoals = false
     
     var body: some View {
@@ -17,9 +17,12 @@ struct PersonalView: View {
         .overlay {
             if showingGoals {
                 ModalView(title: "Volume Goals", isPresented: $showingGoals) {
-                    GoalsContent(volumeGoals: volumeGoals)
+                    GoalsContent()
                 }
             }
+        }
+        .onDisappear {
+            showingGoals = false
         }
     }
 }
@@ -45,91 +48,77 @@ private struct GoalsButton: View {
 }
 
 struct GoalsContent: View {
-    // MARK: - Properties
-    @ObservedObject var volumeGoals: VolumeGoals
-    @State private var expandedSections: Set<String> = Set(MuscleCategories.order)
+    @EnvironmentObject var volumeGoals: VolumeGoals
+    @State private var expandedSections = Set(MuscleCategories.order)
     @State private var editingMuscle: MuscleIdentifier?
     @State private var tempValue = ""
     
-    // MARK: - Body
     var body: some View {
-        ZStack {
-            muscleGroupList
-            
-            if editingMuscle != nil {
-                overlayView
-                if let muscle = editingMuscle?.name {
-                    inputModal(for: muscle)
-                }
-            }
-        }
-    }
-    
-    // MARK: - Subviews
-    private var muscleGroupList: some View {
-        MuscleGroupList(
-            muscleValues: volumeGoals.goals,
-            expandedSections: $expandedSections,
-            onMuscleSelected: handleMuscleSelection
-        )
-    }
-    
-    private var overlayView: some View {
-        Color.black.opacity(0.4)
-            .ignoresSafeArea()
-            .onTapGesture {
-                editingMuscle = nil
-            }
-    }
-    
-    private func inputModal(for muscle: String) -> some View {
         VStack(spacing: 16) {
-            Text("Target \(muscle == "Cardio" ? "Sessions" : "Sets") Per Week")
-                .font(.headline)
+            Text("Change your weekly volume goals")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal)
+                .padding(.top, 8)
             
-            TextField("Enter target", text: $tempValue)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.center)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 100)
-            
-            saveButton(for: muscle)
+            MuscleGroupList(
+                muscleValues: volumeGoals.goals,
+                expandedSections: $expandedSections,
+                onMuscleSelected: handleMuscleSelection,
+                showEditArrows: true
+            )
         }
-        .padding(24)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(radius: 10)
-        .frame(maxWidth: 300)
-        .padding(.horizontal, 20)
-        .transition(.scale)
+        .sheet(item: $editingMuscle) { muscle in
+            pickerView(for: muscle.name)
+        }
+        .onDisappear {
+            editingMuscle = nil
+        }
     }
     
-    private func saveButton(for muscle: String) -> some View {
-        Button("Save") {
-            saveValue(for: muscle)
+    private func pickerView(for muscle: String) -> some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                Text(muscle)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .padding(.top, 4)
+                
+                Picker("Target \(muscle == "Cardio" ? "Sessions" : "Sets")", selection: $tempValue) {
+                    ForEach(0...50, id: \.self) { value in
+                        Text("\(value)").tag("\(value)")
+                    }
+                }
+                .pickerStyle(.wheel)
+                .onChange(of: tempValue) { _, newValue in
+                    if let value = Int(newValue) {
+                        volumeGoals.updateGoal(for: muscle, value: value)
+                    }
+                }
+                
+                Text("Muscle will turn gold when this target is reached")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+            }
+            .navigationTitle("Target \(muscle == "Cardio" ? "Sessions" : "Sets")")
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 16)
-        .background(Color.blue)
-        .foregroundColor(.white)
-        .cornerRadius(8)
+        .presentationDetents([.height(240)])
+        .presentationDragIndicator(.visible)
     }
     
-    // MARK: - Helper Methods
     private func handleMuscleSelection(_ muscle: String) {
         tempValue = "\(volumeGoals.goals[muscle] ?? 0)"
         editingMuscle = MuscleIdentifier(name: muscle)
     }
-    
-    private func saveValue(for muscle: String) {
-        if let value = Int(tempValue) {
-            volumeGoals.updateGoal(for: muscle, value: value)
-        }
-        editingMuscle = nil
-    }
 }
 
-// MARK: - Preview
 #Preview {
     PersonalView()
+        .environmentObject(WorkoutHistory())
+        .environmentObject(VolumeGoals())
 } 

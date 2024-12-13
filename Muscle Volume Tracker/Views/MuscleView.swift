@@ -10,17 +10,23 @@ import SwiftUI
 struct MuscleView: View {
     // MARK: - Properties
     @EnvironmentObject private var workoutHistory: WorkoutHistory
+    @EnvironmentObject private var volumeGoals: VolumeGoals
+    @Environment(\.presentationMode) var presentationMode
     
     // Constants
     private let muscleCategories = MuscleCategories.categories
     private let categoryOrder = MuscleCategories.order
     
     // State
-    @State private var startDate = Date()
+    @State private var startDate: Date = MuscleView.getInitialStartDate()
     @State private var expandedSections: Set<String> = ["Push", "Pull", "Legs", "Misc"]
     @State private var showingDatePicker = false
     @State private var editingMuscle: MuscleIdentifier? = nil
     @State private var tempValue = 0
+    
+    // Haptics
+    private let lightHaptic = UIImpactFeedbackGenerator(style: .light)
+    private let heavyHaptic = UIImpactFeedbackGenerator(style: .heavy)
     
     // MARK: - Computed Properties
     private var muscleValues: [String: Int] {
@@ -42,102 +48,124 @@ struct MuscleView: View {
         return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
     }
     
-    private func intensityColor(for sets: Int, maxSets: Int = 12) -> Color {
-        let intensity = min(Double(sets) / Double(maxSets), 1.0)
+    private func intensityColor(for sets: Int, muscle: String) -> Color {
+        let maxSets = volumeGoals.getGoal(for: muscle)
+        
+        // Handle special cases for low goals
+        if maxSets <= 1 {
+            if sets >= maxSets {
+                return Color(red: 1.0, green: 0.84, blue: 0.0) // Gold for meeting goal
+            } else {
+                return .blue.opacity(sets > 0 ? 1.0 : 0.0) // Full blue if any sets, clear if none
+            }
+        }
+        
+        // Normal case
+        let intensity = min(Double(sets) / Double(maxSets - 1), 1.0)
         
         if sets >= maxSets {
             // Gold color that gets darker with more sets
-            return Color(red: 1.0, green: 0.84, blue: 0.0).opacity(min(0.3 + (intensity * 0.7), 1.0))
+            return Color(red: 1.0, green: 0.84, blue: 0.0).opacity(min(0.3 + ((Double(sets) / Double(maxSets)) * 0.7), 1.0))
         } else {
-            // Regular blue color
+            // Regular blue color reaching max opacity at one set below goal
             return .blue.opacity(intensity)
         }
     }
     
     private var chestIntensity: Color {
         let sets = muscleValues["Chest"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Chest")
     }
     
     private var frontDeltIntensity: Color {
         let sets = muscleValues["Front Delts"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Front Delts")
     }
     
     private var latDeltIntensity: Color {
         let sets = muscleValues["Side Delts"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Side Delts")
     }
     
     private var tricepsIntensity: Color {
         let sets = muscleValues["Triceps"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Triceps")
     }
     
     private var latsIntensity: Color {
         let sets = muscleValues["Lats"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Lats")
     }
     
     private var bicepsIntensity: Color {
         let sets = muscleValues["Biceps"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Biceps")
     }
     
     private var coreIntensity: Color {
         let sets = muscleValues["Core"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Core")
     }
     
     private var quadsIntensity: Color {
         let sets = muscleValues["Quads"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Quads")
     }
     
     private var hamstringsIntensity: Color {
         let sets = muscleValues["Hamstrings"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Hamstrings")
     }
     
     private var calvesIntensity: Color {
         let sets = muscleValues["Calves"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Calves")
     }
     
     private var forearmIntensity: Color {
         let sets = muscleValues["Forearms"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Forearms")
     }
     
     private var glutesIntensity: Color {
         let sets = muscleValues["Glutes"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Glutes")
     }
     
     private var midBackIntensity: Color {
         let sets = muscleValues["Mid Back"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Mid Back")
     }
     
     private var rearDeltIntensity: Color {
         let sets = muscleValues["Rear Delts"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Rear Delts")
     }
     
     private var lowerBackIntensity: Color {
         let sets = muscleValues["Lower Back"] ?? 0
-        return intensityColor(for: sets)
+        return intensityColor(for: sets, muscle: "Lower Back")
     }
     
     private var cardioIntensity: Color {
         let sessions = muscleValues["Cardio"] ?? 0
-        let intensity = min(Double(sessions) / 3.0, 1.0)
+        let maxSessions = volumeGoals.getGoal(for: "Cardio")
         
-        if sessions >= 4 {
-            // Gold color for 4 or more sessions
+        // Handle special cases for low goals
+        if maxSessions <= 1 {
+            if sessions >= maxSessions {
+                return Color(red: 1.0, green: 0.84, blue: 0.0) // Gold for meeting goal
+            } else {
+                return .red.opacity(sessions > 0 ? 1.0 : 0.0) // Full red if any sessions, clear if none
+            }
+        }
+        
+        // Normal case
+        let intensity = min(Double(sessions) / Double(maxSessions - 1), 1.0)
+        
+        if sessions >= maxSessions {
             return Color(red: 1.0, green: 0.84, blue: 0.0)
         } else {
-            // Red color scaling - making it fill faster by using intensity
             return .red.opacity(intensity)
         }
     }
@@ -150,7 +178,27 @@ struct MuscleView: View {
     
     private func incrementMuscleValue(_ muscle: String) {
         var newValues = muscleValues
-        newValues[muscle, default: 0] += 1
+        let currentValue = newValues[muscle, default: 0]
+        newValues[muscle] = currentValue + 1
+        
+        // Get the goal value
+        let goalValue = volumeGoals.getGoal(for: muscle)
+        
+        // Determine if this increment reaches the goal
+        if currentValue + 1 == goalValue {
+            // Strong double haptic for reaching goal
+            let heavyHaptic = UIImpactFeedbackGenerator(style: .heavy)
+            let mediumHaptic = UIImpactFeedbackGenerator(style: .medium)
+            
+            heavyHaptic.impactOccurred()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                mediumHaptic.impactOccurred(intensity: 0.8)
+            }
+        } else {
+            // Light haptic for normal increment
+            lightHaptic.impactOccurred()
+        }
+        
         saveCurrentWeek(updatedValues: newValues)
     }
     
@@ -235,203 +283,237 @@ struct MuscleView: View {
     
     // MARK: - Body
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                // Heart layers at the top
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
                 ZStack {
-                    // Heart fill that changes color
-                    Image("HeartFill")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(height: 60)
-                        .colorMultiply(cardioIntensity)
-                        .animation(.easeInOut(duration: 0.3), value: cardioIntensity)
+                    // Base background
+                    Color(.systemBackground)
+                        .ignoresSafeArea()
                     
-                    // Heart outline on top
-                    Image("HeartOutline")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(height: 60)
-                }
-                .padding(.leading, 50)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .offset(y: -155)
-                
-                // Legs
-                Image("Quads")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(quadsIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: quadsIntensity)
-                
-                Image("Hamstrings")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(hamstringsIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: hamstringsIntensity)
-                
-                Image("Calves")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(calvesIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: calvesIntensity)
-                
-                // Back
-                Image("Lats")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(latsIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: latsIntensity)
-                
-                // Arms
-                Image("Biceps")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(bicepsIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: bicepsIntensity)
-                
-                Image("Triceps")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(tricepsIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: tricepsIntensity)
-                
-                // Shoulders
-                Image("Front Delts")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(frontDeltIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: frontDeltIntensity)
-                
-                Image("Side Delts")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(latDeltIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: latDeltIntensity)
-                
-                // Core and Upper Body
-                Image("Core")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(coreIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: coreIntensity)
-                
-                Image("Chest")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(chestIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: chestIntensity)
-                
-                Image("Forearms")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(forearmIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: forearmIntensity)
-                
-                Image("Glutes")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(glutesIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: glutesIntensity)
-                
-                Image("Mid Back")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(midBackIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: midBackIntensity)
-                
-                Image("Rear Delts")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(rearDeltIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: rearDeltIntensity)
-                
-                Image("Lower Back")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-                    .colorMultiply(lowerBackIntensity)
-                    .animation(.easeInOut(duration: 0.3), value: lowerBackIntensity)
-                
-                // Anatomy outline on top
-                Image("Anatomy")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 440, height: 350)
-            }
-            
-            weekSelector
-            
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Sets Per Week")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal)
-                        .padding(.vertical, 4)
-                    
-                    ForEach(MuscleCategories.muscleViewCategories, id: \.self) { category in
-                        if let muscles = muscleCategories[category] {
-                            muscleSection(category, muscles: muscles)
-                        }
+                    // Heart layers at the top
+                    ZStack {
+                        // Heart fill that changes color
+                        Image("HeartFill")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 60)
+                            .colorMultiply(cardioIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: cardioIntensity)
+                        
+                        // Heart outline on top
+                        Image("HeartOutline")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 60)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        tempValue = muscleValues["Cardio", default: 0]
+                        editingMuscle = MuscleIdentifier(name: "Cardio")
+                    }
+                    .frame(width: 60, height: 60)
+                    .padding(.leading, 25)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .offset(y: -155)
+                    .zIndex(1)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Cardio sessions")
+                    .accessibilityValue("\(muscleValues["Cardio", default: 0]) sessions")
+                    .accessibilityAddTraits(.isButton)
                     
-                    // Cardio section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Cardio")
+                    // Muscle images
+                    Group {
+                        // Legs
+                        Image("Quads")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(quadsIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: quadsIntensity)
+                        
+                        Image("Hamstrings")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(hamstringsIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: hamstringsIntensity)
+                        
+                        Image("Calves")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(calvesIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: calvesIntensity)
+                        
+                        // Back
+                        Image("Lats")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(latsIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: latsIntensity)
+                        
+                        // Arms
+                        Image("Biceps")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(bicepsIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: bicepsIntensity)
+                        
+                        Image("Triceps")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(tricepsIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: tricepsIntensity)
+                        
+                        // Shoulders
+                        Image("Front Delts")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(frontDeltIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: frontDeltIntensity)
+                        
+                        Image("Side Delts")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(latDeltIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: latDeltIntensity)
+                        
+                        // Core and Upper Body
+                        Image("Core")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(coreIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: coreIntensity)
+                        
+                        Image("Chest")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(chestIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: chestIntensity)
+                        
+                        Image("Forearms")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(forearmIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: forearmIntensity)
+                        
+                        Image("Glutes")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(glutesIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: glutesIntensity)
+                        
+                        Image("Mid Back")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(midBackIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: midBackIntensity)
+                        
+                        Image("Rear Delts")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(rearDeltIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: rearDeltIntensity)
+                        
+                        Image("Lower Back")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                            .colorMultiply(lowerBackIntensity)
+                            .animation(.easeInOut(duration: 0.3), value: lowerBackIntensity)
+                        
+                        // Anatomy outline on top
+                        Image("Anatomy")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 440, height: 350)
+                    }
+                    .frame(width: geometry.size.width)
+                }
+                .frame(height: 350)
+                
+                weekSelector
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Sets Per Week")
                             .font(.title2)
                             .fontWeight(.semibold)
                             .padding(.horizontal)
+                            .padding(.vertical, 4)
                         
-                        HStack(spacing: 10) {
-                            HStack {
-                                Text("Cardio")
-                                Spacer()
-                                Text("Sessions: \(muscleValues["Cardio", default: 0])")
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                    .padding(.leading, 2)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
-                            .onTapGesture {
-                                tempValue = muscleValues["Cardio", default: 0]
-                                editingMuscle = MuscleIdentifier(name: "Cardio")
-                            }
-                            
-                            Button {
-                                incrementMuscleValue("Cardio")
-                            } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.blue)
-                                    .font(.title2)
+                        ForEach(MuscleCategories.muscleViewCategories, id: \.self) { category in
+                            if let muscles = muscleCategories[category] {
+                                muscleSection(category, muscles: muscles)
                             }
                         }
-                        .padding(.horizontal)
+                        
+                        // Cardio section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Cardio")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal)
+                            
+                            HStack(spacing: 10) {
+                                HStack {
+                                    Text("Cardio")
+                                    Spacer()
+                                    Text("Sessions: \(muscleValues["Cardio", default: 0])")
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .padding(.leading, 2)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(8)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(8)
+                                .onTapGesture {
+                                    tempValue = muscleValues["Cardio", default: 0]
+                                    editingMuscle = MuscleIdentifier(name: "Cardio")
+                                }
+                                
+                                Button {
+                                    incrementMuscleValue("Cardio")
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.title2)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                        .padding(.top, 8)
+                        
+                        // Add bottom padding to ensure cardio is visible
+                        Color.clear.frame(height: 100)
                     }
-                    .padding(.top)
                 }
             }
         }
+        .background(Color(.systemBackground))
+        .ignoresSafeArea(edges: .bottom)
         .sheet(item: $editingMuscle) { muscle in
             setsPickerSheet(for: muscle.name)
+        }
+        .sheet(isPresented: $showingDatePicker) {
+            weekPickerSheet
+        }
+        .onDisappear {
+            editingMuscle = nil
+            showingDatePicker = false
         }
     }
 }
@@ -492,8 +574,7 @@ private extension MuscleView {
     
     func weekNavigationButton(direction: NavigationDirection) -> some View {
         Button {
-            let value = direction == .forward ? 7 : -7
-            startDate = Calendar.current.date(byAdding: .day, value: value, to: startDate)!
+            moveToWeek(direction: direction)
         } label: {
             Image(systemName: direction.image)
                 .foregroundColor(.blue)
@@ -504,8 +585,12 @@ private extension MuscleView {
     
     func setsPickerSheet(for muscle: String) -> some View {
         NavigationView {
-            VStack {
-                Picker("Sets", selection: $tempValue) {
+            VStack(spacing: 8) {
+                Text(muscle)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                
+                Picker(muscle == "Cardio" ? "Sessions" : "Sets", selection: $tempValue) {
                     ForEach(0...99, id: \.self) { value in
                         Text("\(value)").tag(value)
                     }
@@ -515,12 +600,12 @@ private extension MuscleView {
                     updateMuscleValue(muscle, value: newValue)
                 }
             }
-            .navigationTitle("Select Sets")
+            .navigationTitle(muscle == "Cardio" ? "Select Sessions" : "Select Sets")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
-                        editingMuscle = nil as MuscleIdentifier?
+                        editingMuscle = nil
                     }
                 }
             }
@@ -549,6 +634,33 @@ private extension MuscleView {
                 }
         }
         .presentationDetents([.medium])
+    }
+    
+    private static func getInitialStartDate() -> Date {
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())
+        components.weekday = 1  // 1 = Sunday
+        return calendar.date(from: components) ?? Date()
+    }
+    
+    private func moveToWeek(direction: NavigationDirection) {
+        let calendar = Calendar.current
+        
+        // Get the current week's Sunday
+        var components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: startDate)
+        components.weekday = 1  // 1 = Sunday
+        
+        // Adjust the week
+        if direction == .forward {
+            components.weekOfYear! += 1
+        } else {
+            components.weekOfYear! -= 1
+        }
+        
+        // Get the new date for Sunday of that week
+        if let newDate = calendar.date(from: components) {
+            startDate = newDate
+        }
     }
 }
 

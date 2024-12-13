@@ -4,7 +4,7 @@ import SwiftUI
 enum MuscleCategories {
     static let categories: [String: [String]] = [
         "Push": ["Chest", "Triceps", "Front Delts", "Side Delts"],
-        "Pull": ["Lats", "Biceps", "Mid Back", "Rear Delts"],
+        "Pull": ["Lats", "Mid Back", "Biceps", "Rear Delts"],
         "Legs": ["Quads", "Hamstrings", "Glutes", "Calves"],
         "Misc": ["Core", "Forearms", "Lower Back"],
         "Cardio": ["Cardio"]

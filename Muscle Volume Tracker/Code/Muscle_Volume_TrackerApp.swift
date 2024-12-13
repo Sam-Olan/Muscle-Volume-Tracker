@@ -9,9 +9,14 @@ import SwiftUI
 
 @main
 struct Muscle_Volume_TrackerApp: App {
+    @StateObject private var workoutHistory = WorkoutHistory()
+    @StateObject private var volumeGoals = VolumeGoals()
+    
     var body: some Scene {
         WindowGroup {
             MainView()
+                .environmentObject(workoutHistory)
+                .environmentObject(volumeGoals)
         }
     }
 }

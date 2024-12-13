@@ -167,8 +167,10 @@ struct CustomCalendarView: View {
                 // Calculate the row (0-based)
                 let row = gridPosition / 7
                 
-                // Calculate vertical position with the row
-                let yPosition = (CGFloat(row) * cellHeight) + (cellHeight / 2)
+                // Calculate vertical position with reduced movement
+                let reducedCellHeight = cellHeight * 0.93
+                let verticalOffset: CGFloat = -5
+                let yPosition = (CGFloat(row) * reducedCellHeight) + (cellHeight / 2) + verticalOffset
                 
                 // Calculate horizontal position using weekday
                 let startWeekday = calendar.component(.weekday, from: firstDate) - 1

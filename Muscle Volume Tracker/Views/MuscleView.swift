@@ -22,7 +22,7 @@ struct MuscleView: View {
     @State private var expandedSections: Set<String> = ["Push", "Pull", "Legs", "Misc"]
     @State private var showingDatePicker = false
     @State private var editingMuscle: MuscleIdentifier? = nil
-    @State private var tempValue = 0
+    @State private var tempValue: Int? = nil
     
     // Haptics
     private let lightHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -266,7 +266,7 @@ struct MuscleView: View {
         .background(Color.gray.opacity(0.2))
         .cornerRadius(8)
         .onTapGesture {
-            tempValue = muscleValues[muscle, default: 0]
+            tempValue = nil
             editingMuscle = MuscleIdentifier(name: muscle)
         }
     }
@@ -592,12 +592,14 @@ private extension MuscleView {
                 
                 Picker(muscle == "Cardio" ? "Sessions" : "Sets", selection: $tempValue) {
                     ForEach(0...99, id: \.self) { value in
-                        Text("\(value)").tag(value)
+                        Text("\(value)").tag(Optional(value))  // Wrap in Optional
                     }
                 }
                 .pickerStyle(.wheel)
                 .onChange(of: tempValue) { _, newValue in
-                    updateMuscleValue(muscle, value: newValue)
+                    if let value = newValue {
+                        updateMuscleValue(muscle, value: value)
+                    }
                 }
             }
             .navigationTitle(muscle == "Cardio" ? "Select Sessions" : "Select Sets")
@@ -608,6 +610,9 @@ private extension MuscleView {
                         editingMuscle = nil
                     }
                 }
+            }
+            .onAppear {
+                tempValue = muscleValues[muscle, default: 0]
             }
         }
         .presentationDetents([.height(250)])

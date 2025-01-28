@@ -23,6 +23,7 @@ struct MuscleView: View {
     @State private var showingDatePicker = false
     @State private var editingMuscle: MuscleIdentifier? = nil
     @State private var tempValue: Int? = nil
+    @State private var pulseAnimation = false
     
     // Haptics
     private let lightHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -154,9 +155,9 @@ struct MuscleView: View {
         // Handle special cases for low goals
         if maxSessions <= 1 {
             if sessions >= maxSessions {
-                return Color(red: 1.0, green: 0.84, blue: 0.0) // Gold for meeting goal
+                return .red // Keep red when goal is met
             } else {
-                return .red.opacity(sessions > 0 ? 1.0 : 0.0) // Full red if any sessions, clear if none
+                return .red.opacity(sessions > 0 ? 1.0 : 0.0)
             }
         }
         
@@ -164,7 +165,7 @@ struct MuscleView: View {
         let intensity = min(Double(sessions) / Double(maxSessions - 1), 1.0)
         
         if sessions >= maxSessions {
-            return Color(red: 1.0, green: 0.84, blue: 0.0)
+            return .red // Keep red when goal is met
         } else {
             return .red.opacity(intensity)
         }
@@ -298,7 +299,13 @@ struct MuscleView: View {
                             .aspectRatio(contentMode: .fit)
                             .frame(height: 60)
                             .colorMultiply(cardioIntensity)
+                            .shadow(color: cardioIntensity, radius: pulseAnimation ? 10 : 0)
                             .animation(.easeInOut(duration: 0.3), value: cardioIntensity)
+                            .onAppear {
+                                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                                    pulseAnimation.toggle()
+                                }
+                            }
                         
                         // Heart outline on top
                         Image("HeartOutline")

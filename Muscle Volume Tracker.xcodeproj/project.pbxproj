@@ -30,16 +30,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		D6F76A262D08A72E0089425E /* Muscle Volume TrackerTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Muscle Volume TrackerTests";
-			sourceTree = "<group>";
-		};
-		D6F76A302D08A72E0089425E /* Muscle Volume TrackerUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Muscle Volume TrackerUITests";
-			sourceTree = "<group>";
-		};
 		D6F76A572D08C29E0089425E /* Muscle Volume Tracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Muscle Volume Tracker";
@@ -76,8 +66,6 @@
 			isa = PBXGroup;
 			children = (
 				D6F76A572D08C29E0089425E /* Muscle Volume Tracker */,
-				D6F76A262D08A72E0089425E /* Muscle Volume TrackerTests */,
-				D6F76A302D08A72E0089425E /* Muscle Volume TrackerUITests */,
 				D6F76A142D08A72D0089425E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -130,9 +118,6 @@
 			dependencies = (
 				D6F76A252D08A72E0089425E /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				D6F76A262D08A72E0089425E /* Muscle Volume TrackerTests */,
-			);
 			name = "Muscle Volume TrackerTests";
 			packageProductDependencies = (
 			);
@@ -152,9 +137,6 @@
 			);
 			dependencies = (
 				D6F76A2F2D08A72E0089425E /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				D6F76A302D08A72E0089425E /* Muscle Volume TrackerUITests */,
 			);
 			name = "Muscle Volume TrackerUITests";
 			packageProductDependencies = (

@@ -7,6 +7,37 @@
 
 import SwiftUI
 
+class NoAnimationTabBarController: UITabBarController, UITabBarControllerDelegate {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.delegate = self
+    }
+    
+    func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
+        // Disable animation by setting the selected view controller directly
+        if let index = tabBarController.viewControllers?.firstIndex(of: viewController) {
+            tabBarController.selectedIndex = index
+            return false
+        }
+        return true
+    }
+}
+
+struct NoAnimationTabView: UIViewControllerRepresentable {
+    let content: UITabBarController
+    
+    init(@ViewBuilder content: () -> UITabBarController) {
+        self.content = content()
+    }
+    
+    func makeUIViewController(context: Context) -> UITabBarController {
+        content
+    }
+    
+    func updateUIViewController(_ tabBarController: UITabBarController, context: Context) {
+    }
+}
+
 struct MainView: View {
     @EnvironmentObject private var workoutHistory: WorkoutHistory
     @EnvironmentObject private var volumeGoals: VolumeGoals
@@ -23,35 +54,36 @@ struct MainView: View {
     }
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HistoryView()
-                .tabItem {
-                    VStack {
-                        Image(systemName: "clock")
-                        Text("History")
-                    }
-                }
-                .tag(0)
-
-            MuscleView()
-                .tabItem {
-                    VStack {
-                        Image(systemName: "figure.arms.open")
-                        Text("Volumes")
-                    }
-                }
-                .tag(1)
+        NoAnimationTabView {
+            let tabController = NoAnimationTabBarController()
+            let historyVC = UIHostingController(rootView: HistoryView())
+            let muscleVC = UIHostingController(rootView: MuscleView())
+            let personalVC = UIHostingController(rootView: PersonalView())
             
-            PersonalView()
-                .tabItem {
-                    VStack {
-                        Image(systemName: "person")
-                        Text("Personal")
-                    }
-                }
-                .tag(2)
+            historyVC.tabBarItem = UITabBarItem(
+                title: "History",
+                image: UIImage(systemName: "clock"),
+                tag: 0
+            )
+            
+            muscleVC.tabBarItem = UITabBarItem(
+                title: "Volumes",
+                image: UIImage(systemName: "figure.arms.open"),
+                tag: 1
+            )
+            
+            personalVC.tabBarItem = UITabBarItem(
+                title: "Personal",
+                image: UIImage(systemName: "person"),
+                tag: 2
+            )
+            
+            tabController.viewControllers = [historyVC, muscleVC, personalVC]
+            tabController.selectedIndex = selectedTab
+            
+            return tabController
         }
-        .accentColor(.white)
+        .ignoresSafeArea()
     }
 }
 

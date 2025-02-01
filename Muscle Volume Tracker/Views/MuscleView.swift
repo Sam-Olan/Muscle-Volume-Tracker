@@ -24,6 +24,7 @@ struct MuscleView: View {
     @State private var editingMuscle: MuscleIdentifier? = nil
     @State private var tempValue: Int? = nil
     @State private var pulseAnimation = false
+    @State private var isWeekLocked = true
     
     // Haptics
     private let lightHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -49,15 +50,19 @@ struct MuscleView: View {
         return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
     }
     
+    private var isPastWeek: Bool {
+        startDate < Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date()))!
+    }
+    
     private func intensityColor(for sets: Int, muscle: String) -> Color {
         let maxSets = volumeGoals.getGoal(for: muscle)
         
         // Handle special cases for low goals
         if maxSets <= 1 {
             if sets >= maxSets {
-                return Color(red: 1.0, green: 0.84, blue: 0.0) // Gold for meeting goal
+                return volumeGoals.useCustomGoalColor ? volumeGoals.goalAchievedColor : .blue
             } else {
-                return .blue.opacity(sets > 0 ? 1.0 : 0.0) // Full blue if any sets, clear if none
+                return .blue.opacity(sets > 0 ? 1.0 : 0.0)
             }
         }
         
@@ -65,10 +70,8 @@ struct MuscleView: View {
         let intensity = min(Double(sets) / Double(maxSets - 1), 1.0)
         
         if sets >= maxSets {
-            // Gold color that gets darker with more sets
-            return Color(red: 1.0, green: 0.84, blue: 0.0).opacity(min(0.3 + ((Double(sets) / Double(maxSets)) * 0.7), 1.0))
+            return volumeGoals.useCustomGoalColor ? volumeGoals.goalAchievedColor : .blue
         } else {
-            // Regular blue color reaching max opacity at one set below goal
             return .blue.opacity(intensity)
         }
     }
@@ -152,21 +155,11 @@ struct MuscleView: View {
         let sessions = muscleValues["Cardio"] ?? 0
         let maxSessions = volumeGoals.getGoal(for: "Cardio")
         
-        // Handle special cases for low goals
-        if maxSessions <= 1 {
-            if sessions >= maxSessions {
-                return .red // Keep red when goal is met
-            } else {
-                return .red.opacity(sessions > 0 ? 1.0 : 0.0)
-            }
-        }
-        
-        // Normal case
-        let intensity = min(Double(sessions) / Double(maxSessions - 1), 1.0)
-        
+        // Always use red, but vary the opacity based on progress
         if sessions >= maxSessions {
-            return .red // Keep red when goal is met
+            return .red // Full red when goal is met
         } else {
+            let intensity = min(Double(sessions) / Double(maxSessions), 1.0)
             return .red.opacity(intensity)
         }
     }
@@ -178,6 +171,9 @@ struct MuscleView: View {
     }
     
     private func incrementMuscleValue(_ muscle: String) {
+        // Don't allow changes if week is locked
+        guard !isPastWeek || !isWeekLocked else { return }
+        
         var newValues = muscleValues
         let currentValue = newValues[muscle, default: 0]
         newValues[muscle] = currentValue + 1
@@ -204,6 +200,9 @@ struct MuscleView: View {
     }
     
     private func updateMuscleValue(_ muscle: String, value: Int) {
+        // Don't allow changes if week is locked
+        guard !isPastWeek || !isWeekLocked else { return }
+        
         var newValues = muscleValues
         newValues[muscle] = value
         saveCurrentWeek(updatedValues: newValues)
@@ -216,6 +215,7 @@ struct MuscleView: View {
             
             if expandedSections.contains(title) {
                 muscleList(muscles)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.horizontal)
@@ -259,16 +259,19 @@ struct MuscleView: View {
             Text("Sets: \(muscleValues[muscle, default: 0])")
             Image(systemName: "chevron.up.chevron.down")
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(isPastWeek && isWeekLocked ? .gray.opacity(0.5) : .gray)
                 .padding(.leading, 2)
         }
         .frame(maxWidth: .infinity)
         .padding(8)
         .background(Color.gray.opacity(0.2))
         .cornerRadius(8)
+        .opacity(isPastWeek && isWeekLocked ? 0.7 : 1)
         .onTapGesture {
-            tempValue = nil
-            editingMuscle = MuscleIdentifier(name: muscle)
+            if !isPastWeek || !isWeekLocked {
+                tempValue = nil
+                editingMuscle = MuscleIdentifier(name: muscle)
+            }
         }
     }
     
@@ -277,9 +280,10 @@ struct MuscleView: View {
             incrementMuscleValue(muscle)
         } label: {
             Image(systemName: "plus.circle.fill")
-                .foregroundColor(.blue)
+                .foregroundColor(isPastWeek && isWeekLocked ? .gray : .blue)
                 .font(.title2)
         }
+        .disabled(isPastWeek && isWeekLocked)
     }
     
     // MARK: - Body
@@ -293,30 +297,44 @@ struct MuscleView: View {
                     
                     // Heart layers at the top
                     ZStack {
-                        // Heart fill that changes color
-                        Image("HeartFill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(height: 60)
-                            .colorMultiply(cardioIntensity)
-                            .shadow(color: cardioIntensity, radius: pulseAnimation ? 10 : 0)
-                            .animation(.easeInOut(duration: 0.3), value: cardioIntensity)
-                            .onAppear {
-                                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                                    pulseAnimation.toggle()
+                        if !volumeGoals.hideCardio {
+                            // Heart fill that changes color
+                            Image("HeartFill")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(height: 60)
+                                .colorMultiply(cardioIntensity)
+                                .shadow(color: cardioIntensity, radius: pulseAnimation ? 10 : 0)
+                                .animation(.easeInOut(duration: 0.3), value: cardioIntensity)
+                                .animation(.easeInOut(duration: 0.3), value: pulseAnimation)
+                                .onAppear {
+                                    if (muscleValues["Cardio"] ?? 0) >= volumeGoals.getGoal(for: "Cardio") {
+                                        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                                            pulseAnimation = true
+                                        }
+                                    }
                                 }
-                            }
-                        
-                        // Heart outline on top
-                        Image("HeartOutline")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(height: 60)
+                                .onChange(of: muscleValues["Cardio"]) { _, newValue in
+                                    if (newValue ?? 0) >= volumeGoals.getGoal(for: "Cardio") {
+                                        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                                            pulseAnimation = true
+                                        }
+                                    }
+                                }
+                            
+                            // Heart outline on top
+                            Image("HeartOutline")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(height: 60)
+                        }
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        tempValue = muscleValues["Cardio", default: 0]
-                        editingMuscle = MuscleIdentifier(name: "Cardio")
+                        if !volumeGoals.hideCardio {
+                            tempValue = muscleValues["Cardio", default: 0]
+                            editingMuscle = MuscleIdentifier(name: "Cardio")
+                        }
                     }
                     .frame(width: 60, height: 60)
                     .padding(.leading, 25)
@@ -466,43 +484,49 @@ struct MuscleView: View {
                             }
                         }
                         
-                        // Cardio section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Cardio")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal)
-                            
-                            HStack(spacing: 10) {
-                                HStack {
-                                    Text("Cardio")
-                                    Spacer()
-                                    Text("Sessions: \(muscleValues["Cardio", default: 0])")
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                        .padding(.leading, 2)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(8)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(8)
-                                .onTapGesture {
-                                    tempValue = muscleValues["Cardio", default: 0]
-                                    editingMuscle = MuscleIdentifier(name: "Cardio")
-                                }
+                        if !volumeGoals.hideCardio {
+                            // Cardio section
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Cardio")
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .padding(.horizontal)
                                 
-                                Button {
-                                    incrementMuscleValue("Cardio")
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .foregroundColor(.blue)
-                                        .font(.title2)
+                                HStack(spacing: 10) {
+                                    HStack {
+                                        Text("Cardio")
+                                        Spacer()
+                                        Text("Sessions: \(muscleValues["Cardio", default: 0])")
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.caption)
+                                            .foregroundColor(isPastWeek && isWeekLocked ? .gray.opacity(0.5) : .gray)
+                                            .padding(.leading, 2)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(8)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(8)
+                                    .opacity(isPastWeek && isWeekLocked ? 0.7 : 1)
+                                    .onTapGesture {
+                                        if !isPastWeek || !isWeekLocked {
+                                            tempValue = muscleValues["Cardio", default: 0]
+                                            editingMuscle = MuscleIdentifier(name: "Cardio")
+                                        }
+                                    }
+                                    
+                                    Button {
+                                        incrementMuscleValue("Cardio")
+                                    } label: {
+                                        Image(systemName: "plus.circle.fill")
+                                            .foregroundColor(isPastWeek && isWeekLocked ? .gray : .blue)
+                                            .font(.title2)
+                                    }
+                                    .disabled(isPastWeek && isWeekLocked)
                                 }
+                                .padding(.horizontal)
                             }
-                            .padding(.horizontal)
+                            .padding(.top, 8)
                         }
-                        .padding(.top, 8)
                         
                         // Add bottom padding to ensure cardio is visible
                         Color.clear.frame(height: 100)
@@ -514,9 +538,11 @@ struct MuscleView: View {
         .ignoresSafeArea(edges: .bottom)
         .sheet(item: $editingMuscle) { muscle in
             setsPickerSheet(for: muscle.name)
+                .transition(.move(edge: .bottom))
         }
         .sheet(isPresented: $showingDatePicker) {
             weekPickerSheet
+                .transition(.move(edge: .bottom))
         }
         .onDisappear {
             editingMuscle = nil
@@ -539,6 +565,22 @@ private extension MuscleView {
                 Color.clear
                     .frame(width: 44, height: 44)
                     .padding(.trailing, 25)
+            }
+            
+            // Add lock icon for past weeks
+            if isPastWeek {
+                Button {
+                    withAnimation(.spring()) {
+                        isWeekLocked.toggle()
+                    }
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                } label: {
+                    Image(systemName: isWeekLocked ? "lock.fill" : "lock.open.fill")
+                        .font(.system(size: ViewConstants.lockIconSize))
+                        .foregroundColor(.gray)
+                }
+                .padding(.trailing, 25)
             }
         }
         .padding(.vertical, 8)
@@ -593,16 +635,24 @@ private extension MuscleView {
     func setsPickerSheet(for muscle: String) -> some View {
         NavigationView {
             VStack(spacing: 8) {
+                if isPastWeek && isWeekLocked {
+                    Text("Unlock week to make changes")
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                        .padding(.top)
+                }
+                
                 Text(muscle)
                     .font(.subheadline)
                     .foregroundColor(.gray)
                 
                 Picker(muscle == "Cardio" ? "Sessions" : "Sets", selection: $tempValue) {
                     ForEach(0...99, id: \.self) { value in
-                        Text("\(value)").tag(Optional(value))  // Wrap in Optional
+                        Text("\(value)").tag(Optional(value))
                     }
                 }
                 .pickerStyle(.wheel)
+                .disabled(isPastWeek && isWeekLocked)
                 .onChange(of: tempValue) { _, newValue in
                     if let value = newValue {
                         updateMuscleValue(muscle, value: value)
@@ -633,6 +683,10 @@ private extension MuscleView {
                         from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: newDate)
                     ) {
                         startDate = weekStart
+                        // Lock the week if it's in the past
+                        if isPastWeek {
+                            isWeekLocked = true
+                        }
                     }
                 }
                 .navigationTitle("Select Week")
@@ -672,7 +726,12 @@ private extension MuscleView {
         // Get the new date for Sunday of that week
         if let newDate = calendar.date(from: components) {
             startDate = newDate
+            // Lock the week if it's in the past
+            if isPastWeek {
+                isWeekLocked = true
+            }
         }
     }
 }
+
 

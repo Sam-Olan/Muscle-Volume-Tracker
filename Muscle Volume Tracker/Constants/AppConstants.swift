@@ -26,4 +26,5 @@ enum ViewConstants {
     static let modalVerticalPadding: CGFloat = 25
     static let scrollIndicatorDelay: Double = 0.5
     static let scrollIndicatorDuration: Double = 1.0
+    static let lockIconSize: CGFloat = 24
 } 

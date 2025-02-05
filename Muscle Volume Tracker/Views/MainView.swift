@@ -7,34 +7,49 @@
 
 import SwiftUI
 
-class NoAnimationTabBarController: UITabBarController, UITabBarControllerDelegate {
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        self.delegate = self
+struct CustomTabContainer: View {
+    @Binding var selectedTab: Int
+    let content: [TabItem]
+    
+    struct TabItem {
+        let view: AnyView
+        let icon: String
+        let title: String
+        let tag: Int
     }
     
-    func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
-        // Disable animation by setting the selected view controller directly
-        if let index = tabBarController.viewControllers?.firstIndex(of: viewController) {
-            tabBarController.selectedIndex = index
-            return false
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // Content area
+            content[selectedTab].view
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // Custom tab bar
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
+                    ForEach(0..<content.count, id: \.self) { index in
+                        Button {
+                            selectedTab = index
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: content[index].icon)
+                                    .font(.system(size: 24))
+                                Text(content[index].title)
+                                    .font(.caption)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .foregroundColor(selectedTab == index ? .white : .gray)
+                        }
+                    }
+                }
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                
+                Color.clear
+                    .frame(height: 20)
+            }
+            .background(Color(.darkGray))
         }
-        return true
-    }
-}
-
-struct NoAnimationTabView: UIViewControllerRepresentable {
-    let content: UITabBarController
-    
-    init(@ViewBuilder content: () -> UITabBarController) {
-        self.content = content()
-    }
-    
-    func makeUIViewController(context: Context) -> UITabBarController {
-        content
-    }
-    
-    func updateUIViewController(_ tabBarController: UITabBarController, context: Context) {
     }
 }
 
@@ -43,47 +58,42 @@ struct MainView: View {
     @EnvironmentObject private var volumeGoals: VolumeGoals
     @State var selectedTab = 1
     
+    var body: some View {
+        CustomTabContainer(selectedTab: $selectedTab, content: [
+            .init(
+                view: AnyView(HistoryView()),
+                icon: "clock.fill",
+                title: "History",
+                tag: 0
+            ),
+            .init(
+                view: AnyView(MuscleView()),
+                icon: "figure.arms.open",
+                title: "Volumes",
+                tag: 1
+            ),
+            .init(
+                view: AnyView(PersonalView()),
+                icon: "person.fill",
+                title: "Personal",
+                tag: 2
+            )
+        ])
+        .ignoresSafeArea(edges: .bottom)
+    }
+    
     init() {
         let appearance = UITabBarAppearance()
         appearance.configureWithDefaultBackground()
         appearance.backgroundColor = .darkGray
         
+        // Set selected icon and text color to white
+        appearance.stackedLayoutAppearance.selected.iconColor = .white
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.white]
+        
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
         UITabBar.appearance().unselectedItemTintColor = UIColor.lightGray
-    }
-    
-    var body: some View {
-        NoAnimationTabView {
-            let tabController = NoAnimationTabBarController()
-            let historyVC = UIHostingController(rootView: HistoryView())
-            let muscleVC = UIHostingController(rootView: MuscleView())
-            let personalVC = UIHostingController(rootView: PersonalView())
-            
-            historyVC.tabBarItem = UITabBarItem(
-                title: "History",
-                image: UIImage(systemName: "clock"),
-                tag: 0
-            )
-            
-            muscleVC.tabBarItem = UITabBarItem(
-                title: "Volumes",
-                image: UIImage(systemName: "figure.arms.open"),
-                tag: 1
-            )
-            
-            personalVC.tabBarItem = UITabBarItem(
-                title: "Personal",
-                image: UIImage(systemName: "person"),
-                tag: 2
-            )
-            
-            tabController.viewControllers = [historyVC, muscleVC, personalVC]
-            tabController.selectedIndex = selectedTab
-            
-            return tabController
-        }
-        .ignoresSafeArea()
     }
 }
 

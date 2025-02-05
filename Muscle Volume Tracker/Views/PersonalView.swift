@@ -7,51 +7,65 @@ struct PersonalView: View {
     
     var body: some View {
         NavigationView {
-            List {
-                Section {
-                    GoalsButton(showingGoals: $showingGoals)
-                }
-                Section("Appearance") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Toggle("Goal Achieved Colour", isOn: Binding(
-                            get: { volumeGoals.useCustomGoalColor },
-                            set: { volumeGoals.toggleCustomColor($0) }
-                        ))
-                        .toggleStyle(BlueToggleStyle())
-                        
-                        Text("Muscle colour changes when goal is reached")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .padding(.leading, 4)
+            VStack(spacing: 0) {
+                // Title
+                Text("Personal")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 24)
+                    .padding(.bottom, 4)
+                    .padding(.horizontal, 20)
+                    .background(Color(.systemGroupedBackground))
+                
+                // List
+                List {
+                    Section {
+                        GoalsButton(showingGoals: $showingGoals)
                     }
-                    
-                    if volumeGoals.useCustomGoalColor {
-                        Button {
-                            showingColorPicker = true
-                        } label: {
-                            HStack {
-                                Text("Select Colour")
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Circle()
-                                    .fill(volumeGoals.goalAchievedColor)
-                                    .frame(width: 24, height: 24)
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.blue)
-                                    .font(.caption)
+                    Section("Appearance") {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle("Goal Achieved Colour", isOn: Binding(
+                                get: { volumeGoals.useCustomGoalColor },
+                                set: { volumeGoals.toggleCustomColor($0) }
+                            ))
+                            .toggleStyle(BlueToggleStyle())
+                            
+                            Text("Muscle colour changes when goal is reached")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 4)
+                        }
+                        
+                        if volumeGoals.useCustomGoalColor {
+                            Button {
+                                showingColorPicker = true
+                            } label: {
+                                HStack {
+                                    Text("Select Colour")
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Circle()
+                                        .fill(volumeGoals.goalAchievedColor)
+                                        .frame(width: 24, height: 24)
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.blue)
+                                        .font(.caption)
+                                }
                             }
                         }
+                        
+                        Toggle("Hide Cardio", isOn: Binding(
+                            get: { volumeGoals.hideCardio },
+                            set: { volumeGoals.toggleHideCardio($0) }
+                        ))
+                        .toggleStyle(BlueToggleStyle())
                     }
-                    
-                    Toggle("Hide Cardio", isOn: Binding(
-                        get: { volumeGoals.hideCardio },
-                        set: { volumeGoals.toggleHideCardio($0) }
-                    ))
-                    .toggleStyle(BlueToggleStyle())
                 }
+                .listStyle(.insetGrouped)
             }
-            .navigationTitle("Personal")
-            .listStyle(.insetGrouped)
+            .background(Color(.systemGroupedBackground))
+            .navigationBarTitleDisplayMode(.inline)
         }
         .overlay {
             if showingGoals {

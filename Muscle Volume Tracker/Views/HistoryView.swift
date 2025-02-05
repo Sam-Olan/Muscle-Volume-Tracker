@@ -52,19 +52,20 @@ struct ModalView<Content: View>: View {
                     ScrollView {
                         content
                             .padding(.horizontal)
-                            .padding(.vertical, 8)
+                            .padding(.top, 4)
+                            .padding(.bottom, -4)
                     }
-                    .frame(maxHeight: UIScreen.main.bounds.height * 0.95)
-                    .scrollIndicators(showScrollIndicator ? .visible : .hidden)
+                    .frame(maxHeight: UIScreen.main.bounds.height * 0.72)
+                    .scrollIndicators(.hidden)
                 }
                 .frame(maxWidth: min(UIScreen.main.bounds.width - 40, 500))
                 .background(Color(.systemBackground).opacity(0.98))
                 .cornerRadius(12)
                 .shadow(color: .black.opacity(0.2), radius: 10)
-                .padding(.vertical, 25)
+                .padding(.vertical, 20)
                 .zIndex(2)
+                .position(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2 - 85)
                 .onAppear {
-                    // Show scroll indicator briefly when modal appears
                     showScrollIndicator = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         showScrollIndicator = false
@@ -91,11 +92,6 @@ struct HistoryView: View {
                             Spacer()
                                 .frame(height: 60)
                             
-                            Text("Volume History")
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .padding(.bottom, 40)
-                            
                             Text("No workout data available")
                                 .font(.headline)
                                 .foregroundColor(.secondary)
@@ -104,72 +100,89 @@ struct HistoryView: View {
                                 .foregroundColor(.gray)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .navigationBarTitleDisplayMode(.inline)
                     } else {
-                        List {
-                            Button {
-                                showingAllTimeStats = true
-                            } label: {
-                                HStack {
-                                    Text("All Time Stats")
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.blue)
-                                        .font(.caption)
-                                }
-                            }
+                        VStack(spacing: 0) {
+                            // Title
+                            Text("Volume History")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 24)
+                                .padding(.bottom, 8)
+                                .padding(.horizontal, 20)
+                                .background(Color(.systemGroupedBackground))
                             
-                            Section {
-                                ForEach(workoutHistory.weeks) { week in
-                                    Button {
-                                        selectedWeek = week
-                                    } label: {
-                                        HStack {
-                                            Text(getDateRange(for: week.startDate))
-                                                .font(.headline)
-                                                .foregroundColor(.primary)
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .foregroundColor(.blue)
-                                                .font(.caption)
-                                        }
-                                    }
-                                }
-                            } header: {
-                                Text("Volume Per Week")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .textCase(nil)
-                                    .foregroundColor(.primary)
-                                    .padding(.top, 8)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.leading, -20)
-                            }
-                            
-                            Section {
-                                Button(role: .destructive) {
-                                    showingResetConfirmation = true
+                            // List
+                            List {
+                                Button {
+                                    showingAllTimeStats = true
                                 } label: {
                                     HStack {
-                                        Image(systemName: "trash")
-                                        Text("Reset All Data")
+                                        Text("All Time Stats")
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .foregroundColor(.blue)
+                                            .font(.caption)
                                     }
                                 }
-                                .tint(.red)
-                            } header: {
-                                Text("Data Management")
-                                    .font(.headline)
-                                    .textCase(nil)
-                                    .foregroundColor(.primary)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                
+                                Section {
+                                    ForEach(workoutHistory.weeks) { week in
+                                        Button {
+                                            selectedWeek = week
+                                        } label: {
+                                            HStack {
+                                                Text(getDateRange(for: week.startDate))
+                                                    .font(.headline)
+                                                    .foregroundColor(.primary)
+                                                Spacer()
+                                                Image(systemName: "chevron.right")
+                                                    .foregroundColor(.blue)
+                                                    .font(.caption)
+                                            }
+                                        }
+                                    }
+                                } header: {
+                                    Text("Volume Per Week")
+                                        .font(.title2)
+                                        .fontWeight(.bold)
+                                        .textCase(nil)
+                                        .foregroundColor(.primary)
+                                        .padding(.top, 8)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.leading, -19)
+                                }
+                                
+                                Section {
+                                    Button(role: .destructive) {
+                                        showingResetConfirmation = true
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "trash")
+                                            Text("Reset All Data")
+                                        }
+                                    }
+                                    .tint(.red)
+                                } header: {
+                                    Text("Data Management")
+                                        .font(.headline)
+                                        .textCase(nil)
+                                        .foregroundColor(.primary)
+                                }
                             }
+                            .listStyle(.insetGrouped)
                         }
-                        .listStyle(.insetGrouped)
-                        .navigationTitle("Volume History")
+                        .background(Color(.systemGroupedBackground))
+                        .navigationBarTitleDisplayMode(.inline)
                     }
                 }
             }
             
+            // Modal views
             if let week = selectedWeek {
                 ModalView(title: getDateRange(for: week.startDate), isPresented: Binding(
                     get: { selectedWeek != nil },
@@ -180,17 +193,10 @@ struct HistoryView: View {
             }
             
             if showingAllTimeStats {
-                ModalView(title: "All Time Stats", isPresented: Binding(
-                    get: { showingAllTimeStats },
-                    set: { if !$0 { showingAllTimeStats = false } }
-                )) {
+                ModalView(title: "All Time Stats", isPresented: $showingAllTimeStats) {
                     AllTimeStatsContent(workoutHistory: workoutHistory)
                 }
             }
-        }
-        .onDisappear {
-            selectedWeek = nil
-            showingAllTimeStats = false
         }
         .confirmationDialog(
             "Reset All Data",

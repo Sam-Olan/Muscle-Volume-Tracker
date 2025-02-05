@@ -23,8 +23,9 @@ struct MuscleView: View {
     @State private var showingDatePicker = false
     @State private var editingMuscle: MuscleIdentifier? = nil
     @State private var tempValue: Int? = nil
-    @State private var pulseAnimation = false
     @State private var isWeekLocked = true
+    @State private var animationTrigger = false
+    @State private var isPulsing = false
     
     // Haptics
     private let lightHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -155,13 +156,14 @@ struct MuscleView: View {
         let sessions = muscleValues["Cardio"] ?? 0
         let maxSessions = volumeGoals.getGoal(for: "Cardio")
         
-        // Always use red, but vary the opacity based on progress
-        if sessions >= maxSessions {
-            return .red // Full red when goal is met
-        } else {
-            let intensity = min(Double(sessions) / Double(maxSessions), 1.0)
-            return .red.opacity(intensity)
-        }
+        // Simple linear intensity
+        let intensity = min(Double(sessions) / Double(maxSessions), 1.0)
+        return .red.opacity(intensity)
+    }
+    
+    private var isCardioGoalMet: Bool {
+        let currentWeekCardio = muscleValues["Cardio"] ?? 0
+        return currentWeekCardio >= volumeGoals.getGoal(for: "Cardio")
     }
     
     // MARK: - Methods
@@ -298,53 +300,72 @@ struct MuscleView: View {
                     // Heart layers at the top
                     ZStack {
                         if !volumeGoals.hideCardio {
-                            // Heart fill that changes color
-                            Image("HeartFill")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(height: 60)
-                                .colorMultiply(cardioIntensity)
-                                .shadow(color: cardioIntensity, radius: pulseAnimation ? 10 : 0)
-                                .animation(.easeInOut(duration: 0.3), value: cardioIntensity)
-                                .animation(.easeInOut(duration: 0.3), value: pulseAnimation)
-                                .onAppear {
-                                    if (muscleValues["Cardio"] ?? 0) >= volumeGoals.getGoal(for: "Cardio") {
-                                        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                                            pulseAnimation = true
+                            ZStack {
+                                // Glow effect
+                                Image("HeartFill")
+                                    .resizable()
+                                    .renderingMode(.template)
+                                    .foregroundStyle(.red)
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(height: 60)
+                                    .opacity(isCardioGoalMet ? (isPulsing ? 0.9 : 0.4) : 0)
+                                    .blur(radius: 6)
+                                    .scaleEffect(1.15)
+                                    .onChange(of: isCardioGoalMet) { _, newValue in
+                                        if newValue {
+                                            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                                                isPulsing = true
+                                            }
+                                        } else {
+                                            isPulsing = false
                                         }
                                     }
-                                }
-                                .onChange(of: muscleValues["Cardio"]) { _, newValue in
-                                    if (newValue ?? 0) >= volumeGoals.getGoal(for: "Cardio") {
-                                        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                                            pulseAnimation = true
+                                    .onChange(of: startDate) { _, _ in
+                                        isPulsing = false
+                                        if isCardioGoalMet {
+                                            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                                                isPulsing = true
+                                            }
                                         }
                                     }
-                                }
-                            
-                            // Heart outline on top
-                            Image("HeartOutline")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(height: 60)
+                                    .onAppear {
+                                        if isCardioGoalMet {
+                                            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                                                isPulsing = true
+                                            }
+                                        }
+                                    }
+                                
+                                // Main heart
+                                Image("HeartFill")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(height: 60)
+                                    .colorMultiply(cardioIntensity)
+                                    .animation(.easeInOut(duration: 0.3), value: cardioIntensity)
+                                
+                                // Heart outline
+                                Image("HeartOutline")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(height: 60)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                tempValue = muscleValues["Cardio", default: 0]
+                                editingMuscle = MuscleIdentifier(name: "Cardio")
+                            }
+                            .frame(width: 60, height: 60)
+                            .padding(.leading, 25)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .offset(y: -155)
+                            .zIndex(1)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Cardio sessions")
+                            .accessibilityValue("\(muscleValues["Cardio", default: 0]) sessions")
+                            .accessibilityAddTraits(.isButton)
                         }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if !volumeGoals.hideCardio {
-                            tempValue = muscleValues["Cardio", default: 0]
-                            editingMuscle = MuscleIdentifier(name: "Cardio")
-                        }
-                    }
-                    .frame(width: 60, height: 60)
-                    .padding(.leading, 25)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .offset(y: -155)
-                    .zIndex(1)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Cardio sessions")
-                    .accessibilityValue("\(muscleValues["Cardio", default: 0]) sessions")
-                    .accessibilityAddTraits(.isButton)
                     
                     // Muscle images
                     Group {

@@ -61,5 +61,6 @@ struct MuscleGroupList: View {
                 }
             }
         }
+        .padding(.bottom, 16)
     }
 } 

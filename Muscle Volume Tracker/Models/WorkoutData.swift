@@ -13,26 +13,36 @@ struct WorkoutWeek: Identifiable, Codable {
 }
 
 @MainActor
-class WorkoutHistory: ObservableObject {
+final class WorkoutHistory: ObservableObject {
     @Published private(set) var weeks: [WorkoutWeek] = []
     private let saveKey = "WorkoutHistory"
+    private let userDefaults: UserDefaults
     
-    init() {
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
         loadData()
     }
     
     func addWeek(_ week: WorkoutWeek) {
-        if let index = weeks.firstIndex(where: { Calendar.current.isDate($0.startDate, equalTo: week.startDate, toGranularity: .weekOfYear) }) {
-            weeks[index] = week // Update existing week
-        } else {
-            weeks.append(week) // Add new week
+        // Check if all values are 0
+        let hasNoData = week.muscleValues.isEmpty || week.muscleValues.allSatisfy { $0.value == 0 }
+        
+        if let index = weeks.firstIndex(where: { Calendar.shared.isDate($0.startDate, equalTo: week.startDate, toGranularity: .weekOfYear) }) {
+            if hasNoData {
+                weeks.remove(at: index)
+            } else {
+                weeks[index] = week
+            }
+        } else if !hasNoData {
+            weeks.append(week)
         }
-        weeks.sort { $0.startDate > $1.startDate } // Most recent first
+        
+        weeks.sort { $0.startDate > $1.startDate }
         saveData()
     }
     
     private func loadData() {
-        guard let data = UserDefaults.standard.data(forKey: saveKey) else { return }
+        guard let data = userDefaults.data(forKey: saveKey) else { return }
         
         do {
             weeks = try JSONDecoder().decode([WorkoutWeek].self, from: data)
@@ -45,7 +55,7 @@ class WorkoutHistory: ObservableObject {
     private func saveData() {
         do {
             let data = try JSONEncoder().encode(weeks)
-            UserDefaults.standard.set(data, forKey: saveKey)
+            userDefaults.set(data, forKey: saveKey)
         } catch {
             print("Error saving workout data: \(error.localizedDescription)")
             // Consider implementing proper error handling
@@ -54,8 +64,8 @@ class WorkoutHistory: ObservableObject {
     
     // MARK: - Helper Methods
     func clearAllData() {
-        weeks = []
-        UserDefaults.standard.removeObject(forKey: saveKey)
+        weeks.removeAll()
+        userDefaults.removeObject(forKey: saveKey)
     }
     
     func deleteWeek(withID id: UUID) {

@@ -84,119 +84,19 @@ struct HistoryView: View {
     @State private var showingResetConfirmation = false
     
     var body: some View {
-        ZStack {
-            NavigationView {
-                Group {
-                    if workoutHistory.weeks.isEmpty {
-                        VStack(spacing: 0) {
-                            Spacer()
-                                .frame(height: 60)
-                            
-                            Text("No workout data available")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            Text("Start tracking your sets in the Volumes tab")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .navigationBarTitleDisplayMode(.inline)
-                    } else {
-                        VStack(spacing: 0) {
-                            // Title
-                            Text("Volume History")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.top, 24)
-                                .padding(.bottom, 8)
-                                .padding(.horizontal, 20)
-                                .background(Color(.systemGroupedBackground))
-                            
-                            // List
-                            List {
-                                Button {
-                                    showingAllTimeStats = true
-                                } label: {
-                                    HStack {
-                                        Text("All Time Stats")
-                                            .font(.headline)
-                                            .foregroundColor(.primary)
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .foregroundColor(.blue)
-                                            .font(.caption)
-                                    }
-                                }
-                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                                
-                                Section {
-                                    ForEach(workoutHistory.weeks) { week in
-                                        Button {
-                                            selectedWeek = week
-                                        } label: {
-                                            HStack {
-                                                Text(getDateRange(for: week.startDate))
-                                                    .font(.headline)
-                                                    .foregroundColor(.primary)
-                                                Spacer()
-                                                Image(systemName: "chevron.right")
-                                                    .foregroundColor(.blue)
-                                                    .font(.caption)
-                                            }
-                                        }
-                                    }
-                                } header: {
-                                    Text("Volume Per Week")
-                                        .font(.title2)
-                                        .fontWeight(.bold)
-                                        .textCase(nil)
-                                        .foregroundColor(.primary)
-                                        .padding(.top, 8)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.leading, -19)
-                                }
-                                
-                                Section {
-                                    Button(role: .destructive) {
-                                        showingResetConfirmation = true
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "trash")
-                                            Text("Reset All Data")
-                                        }
-                                    }
-                                    .tint(.red)
-                                } header: {
-                                    Text("Data Management")
-                                        .font(.headline)
-                                        .textCase(nil)
-                                        .foregroundColor(.primary)
-                                }
-                            }
-                            .listStyle(.insetGrouped)
-                        }
-                        .background(Color(.systemGroupedBackground))
-                        .navigationBarTitleDisplayMode(.inline)
-                    }
+        NavigationView {
+            Group {
+                if workoutHistory.weeks.isEmpty {
+                    emptyStateView
+                } else {
+                    mainListView
                 }
             }
-            
-            // Modal views
-            if let week = selectedWeek {
-                ModalView(title: getDateRange(for: week.startDate), isPresented: Binding(
-                    get: { selectedWeek != nil },
-                    set: { if !$0 { selectedWeek = nil } }
-                )) {
-                    WeekDetailContent(week: week)
-                }
-            }
-            
-            if showingAllTimeStats {
-                ModalView(title: "All Time Stats", isPresented: $showingAllTimeStats) {
-                    AllTimeStatsContent(workoutHistory: workoutHistory)
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .overlay {
+            weekDetailOverlay
+            allTimeStatsOverlay
         }
         .confirmationDialog(
             "Reset All Data",
@@ -206,9 +106,146 @@ struct HistoryView: View {
             Button("Reset", role: .destructive) {
                 workoutHistory.clearAllData()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This will permanently delete all workout data. This action cannot be undone.")
+            Text("This will permanently delete all workout data")
+        }
+    }
+    
+    // MARK: - Subviews
+    
+    private var emptyStateView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 60)
+            Text("No workout data available")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            Text("Start tracking your sets in the Volumes tab")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private var mainListView: some View {
+        VStack(spacing: 0) {
+            titleHeader
+            listContent
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+    
+    private var titleHeader: some View {
+        Text("Volume History")
+            .font(.title)
+            .fontWeight(.bold)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 24)
+            .padding(.bottom, 8)
+            .padding(.horizontal, 20)
+            .background(Color(.systemGroupedBackground))
+    }
+    
+    private var listContent: some View {
+        List {
+            allTimeStatsButton
+            weeklyDataSection
+            dataManagementSection
+        }
+        .listStyle(.insetGrouped)
+    }
+    
+    private var allTimeStatsButton: some View {
+        Button {
+            showingAllTimeStats = true
+        } label: {
+            HStack {
+                Text("All Time Stats")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.blue)
+                    .font(.caption)
+            }
+        }
+        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+    }
+    
+    private var weeklyDataSection: some View {
+        Section {
+            ForEach(workoutHistory.weeks) { week in
+                weekRow(for: week)
+            }
+        } header: {
+            Text("Volume Per Week")
+                .font(.title2)
+                .fontWeight(.bold)
+                .textCase(nil)
+                .foregroundColor(.primary)
+                .padding(.top, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, -19)
+        }
+    }
+    
+    private func weekRow(for week: WorkoutWeek) -> some View {
+        Button {
+            selectedWeek = week
+        } label: {
+            HStack {
+                Text(getDateRange(for: week.startDate))
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.blue)
+                    .font(.caption)
+            }
+        }
+    }
+    
+    private var dataManagementSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showingResetConfirmation = true
+            } label: {
+                Label("Reset All Data", systemImage: "trash")
+            }
+            .tint(.red)
+        } header: {
+            Text("Data Management")
+                .font(.headline)
+                .textCase(nil)
+                .foregroundColor(.primary)
+        }
+    }
+    
+    // MARK: - Overlays
+    
+    private var weekDetailOverlay: some View {
+        Group {
+            if let week = selectedWeek {
+                ModalView(
+                    title: getDateRange(for: week.startDate),
+                    isPresented: Binding(
+                        get: { selectedWeek != nil },
+                        set: { if !$0 { selectedWeek = nil } }
+                    )
+                ) {
+                    WeekDetailContent(week: week)
+                }
+            }
+        }
+    }
+    
+    private var allTimeStatsOverlay: some View {
+        Group {
+            if showingAllTimeStats {
+                ModalView(title: "All Time Stats", isPresented: $showingAllTimeStats) {
+                    AllTimeStatsContent(workoutHistory: workoutHistory)
+                }
+            }
         }
     }
     
